@@ -1,0 +1,5 @@
+PATH_INPUT = "./imagens/entrada/"
+PATH_OUTPUT = "./imagens/saida/"
+PATH_ORIGINALS = "./imagens/originais/"
+TEST_FILE = "teste.jpg"
+PATH_INPUT_TEST = f"{PATH_INPUT}{TEST_FILE}"

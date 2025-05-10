@@ -1,0 +1,121 @@
+# Remove BG
+
+## Descrição
+
+O projeto **Remove BG** é uma API desenvolvida em Python utilizando o framework Flask. Ela permite realizar o upload de imagens, remover o fundo de imagens e adicionar um fundo personalizado. O objetivo principal é facilitar o processamento de imagens de forma simples e eficiente.
+
+## Funcionalidades
+
+- **Upload de Imagens**: Envie imagens para o servidor.
+- **Remoção de Fundo**: Remova o fundo de uma imagem enviada.
+- **Adição de Fundo**: Adicione um fundo personalizado a uma imagem.
+- **Download de Imagens Processadas**: Baixe as imagens processadas diretamente do servidor.
+
+## Estrutura do Projeto
+
+```
+remove_bg/
+├── classes/                # Classes para manipulação de arquivos e imagens
+├── imagens/                # Diretório para armazenar imagens
+│   ├── entrada/            # Imagens enviadas pelo usuário
+│   ├── originais/          # Imagens originais
+│   └── saida/              # Imagens processadas
+├── util/                   # Utilitários e configurações
+├── main.py                 # Arquivo principal para execução
+├── requirements.txt        # Dependências do projeto
+├── tests.py                # Testes automatizados
+└── README.md               # Documentação do projeto
+```
+
+## Instalação
+
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/felipesbarcellos/remove-bg.git
+   cd remove_bg
+   ```
+
+2. Crie um ambiente virtual e ative-o:
+   ```bash
+   python -m venv .venv
+   .\.venv\Scripts\activate
+   ```
+
+3. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   **Principais dependências**:
+   - Flask
+   - Pillow
+   - Flask-RESTful
+   - pytest
+
+## Uso
+
+1. Inicie o servidor Flask:
+   ```bash
+   python main.py
+   ```
+
+2. Acesse a documentação interativa da API (Swagger):
+   - URL: `http://localhost:5000/apidocs`
+
+3. Utilize os endpoints disponíveis para:
+   - Fazer upload de imagens.
+   - Remover o fundo de imagens.
+   - Adicionar um fundo personalizado (apenas RGB).
+   - Baixar imagens processadas.
+
+## Endpoints Principais
+
+### 1. Upload de Imagem
+- **URL**: `/api/upload`
+- **Método**: `POST`
+- **Descrição**: Envia uma imagem para o servidor.
+- **Parâmetros**:
+  - `file` (formData, obrigatório): O arquivo a ser enviado.
+
+### 2. Remover Fundo
+- **URL**: `/api/image/remove-background`
+- **Método**: `POST`
+- **Descrição**: Remove o fundo de uma imagem enviada.
+- **Parâmetros**:
+  - `file` (query, obrigatório): O caminho do arquivo a ser processado, incluindo o nome e a extensão do arquivo.
+
+### 3. Adicionar Fundo
+- **URL**: `/api/image/add-background`
+- **Método**: `POST`
+- **Descrição**: Adiciona um fundo personalizado a uma imagem.
+- **Parâmetros**:
+  - `file` (query, obrigatório): O caminho do arquivo a ser processado, incluindo o nome e a extensão do arquivo.
+  - `color` (query, opcional): A cor do fundo a ser adicionado (opcional).
+
+### 4. Download de Imagem Processada
+- **URL**: `/api/image/download`
+- **Método**: `GET`
+- **Descrição**: Faz o download de uma imagem processada.
+- **Parâmetros**:
+  - `file` (query, obrigatório): O nome do arquivo a ser baixado, incluindo a extensão.
+
+## Testes
+
+Para executar os testes automatizados, utilize o comando:
+```bash
+pytest tests.py
+```
+
+Os testes cobrem:
+- Upload de imagens.
+- Remoção de fundo.
+- Adição de fundo personalizado.
+- Download de imagens processadas.
+
+## Contribuição
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+
+## Licença
+
+Este projeto está licenciado sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
