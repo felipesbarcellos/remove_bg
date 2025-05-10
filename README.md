@@ -82,14 +82,14 @@ remove_bg/
 - **Método**: `POST`
 - **Descrição**: Remove o fundo de uma imagem enviada.
 - **Parâmetros**:
-  - `file` (query, obrigatório): O caminho do arquivo a ser processado, incluindo o nome e a extensão do arquivo.
+  - `file` (query, obrigatório): o nome e a extensão do arquivo.
 
 ### 3. Adicionar Fundo
 - **URL**: `/api/image/add-background`
 - **Método**: `POST`
 - **Descrição**: Adiciona um fundo personalizado a uma imagem.
 - **Parâmetros**:
-  - `file` (query, obrigatório): O caminho do arquivo a ser processado, incluindo o nome e a extensão do arquivo.
+  - `file` (query, obrigatório): o nome e a extensão do arquivo.
   - `color` (query, opcional): A cor do fundo a ser adicionado (opcional).
 
 ### 4. Download de Imagem Processada
