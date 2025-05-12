@@ -1,4 +1,4 @@
-# Remove BG
+# Remove BG API
 
 ## Descrição
 
@@ -10,6 +10,7 @@ O projeto **Remove BG** é uma API desenvolvida em Python utilizando o framework
 - **Remoção de Fundo**: Remova o fundo de uma imagem enviada.
 - **Adição de Fundo**: Adicione um fundo personalizado a uma imagem.
 - **Download de Imagens Processadas**: Baixe as imagens processadas diretamente do servidor.
+- **Documentação Interativa**: Acesse a documentação interativa da API com Swagger.
 
 ## Estrutura do Projeto
 
@@ -23,7 +24,7 @@ remove_bg/
 ├── util/                   # Utilitários e configurações
 ├── main.py                 # Arquivo principal para execução
 ├── requirements.txt        # Dependências do projeto
-├── tests.py                # Testes automatizados
+├── tests/                  # Testes automatizados
 └── README.md               # Documentação do projeto
 ```
 
@@ -78,14 +79,14 @@ remove_bg/
   - `file` (formData, obrigatório): O arquivo a ser enviado.
 
 ### 2. Remover Fundo
-- **URL**: `/api/image/remove-background`
+- **URL**: `/api/remove-background`
 - **Método**: `POST`
 - **Descrição**: Remove o fundo de uma imagem enviada.
 - **Parâmetros**:
   - `file` (query, obrigatório): o nome e a extensão do arquivo.
 
 ### 3. Adicionar Fundo
-- **URL**: `/api/image/add-background`
+- **URL**: `/api/add-background`
 - **Método**: `POST`
 - **Descrição**: Adiciona um fundo personalizado a uma imagem.
 - **Parâmetros**:
@@ -93,17 +94,22 @@ remove_bg/
   - `color` (query, opcional): A cor do fundo a ser adicionado (opcional).
 
 ### 4. Download de Imagem Processada
-- **URL**: `/api/image/download`
+- **URL**: `/api/download`
 - **Método**: `GET`
 - **Descrição**: Faz o download de uma imagem processada.
 - **Parâmetros**:
   - `file` (query, obrigatório): O nome do arquivo a ser baixado, incluindo a extensão.
 
+### 5. Health Check
+- **URL**: `/api/health`
+- **Método**: `GET`
+- **Descrição**: Verifica o status da API.
+
 ## Testes
 
 Para executar os testes automatizados, utilize o comando:
 ```bash
-pytest tests.py
+pytest tests/
 ```
 
 Os testes cobrem:
@@ -111,6 +117,7 @@ Os testes cobrem:
 - Remoção de fundo.
 - Adição de fundo personalizado.
 - Download de imagens processadas.
+- Verificação de saúde da API.
 
 ## Contribuição
 

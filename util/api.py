@@ -8,11 +8,12 @@ import os
 from util import setup_directories
 from util.constants import PATH_INPUT, PATH_OUTPUT
 from config import Config
+import logging
 
 app = Flask(__name__)
 CORS(app, 
      resources={r"/api/*": {
-         "origins": Config.CORS_ORIGINS,  # Lista de origens permitidas
+         "origins": Config.CORS_ORIGINS,
          "methods": Config.CORS_METHODS,
          "allow_headers": Config.CORS_ALLOW_HEADERS,
          "expose_headers": Config.CORS_EXPOSE_HEADERS,
@@ -25,8 +26,6 @@ swagger_config = {
     "specs": [{
         "endpoint": 'apispec',
         "route": '/apispec.json',
-        "rule_filter": lambda rule: True,
-        "model_filter": lambda tag: True,
     }],
     "static_url_path": "/flasgger_static",
     "swagger_ui": True,
@@ -47,7 +46,7 @@ swagger_template = {
 
 Swagger(app, config=swagger_config, template=swagger_template)
 
-# Configure rate limiting
+# Configure rate limiting with in-memory storage
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
@@ -67,9 +66,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 
 def allowed_file(filename):
+    """Verifica se o arquivo tem uma extensão permitida."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+# Improved error handling for the upload_file endpoint
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """
@@ -84,16 +85,18 @@ def upload_file():
         in: formData
         type: file
         required: true
-        description: Arquivo de imagem
+        description: Arquivo de imagem (png, jpg, jpeg)
     responses:
       200:
         description: Sucesso
         schema:
           type: object
           properties:
-            filePath:
+            fileName:
               type: string
-              description: Caminho do arquivo
+              description: Nome do arquivo salvo
+        examples:
+          application/json: { "fileName": "teste.jpg" }
       400:
         description: Erro na requisição
         schema:
@@ -101,24 +104,48 @@ def upload_file():
           properties:
             error:
               type: string
-              description: Mensagem de erro
+        examples:
+          application/json: { "error": "No file selected for uploading" }
+      500:
+        description: Erro inesperado
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: { "error": "An unexpected error occurred" }
     """
-    if 'file' not in request.files:
-      return jsonify({"error": "No file part in the request"}), 400
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part in the request"}), 400
 
-    file = request.files['file']
+        file = request.files['file']
 
-    if file.filename == '':
-      return jsonify({"error": "No file selected for uploading"}), 400
+        if file.filename == '':
+            return jsonify({"error": "No file selected for uploading"}), 400
 
-    file_path = os.path.join(PATH_INPUT, file.filename)
-    file.save(file_path)
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Invalid file extension. Allowed: png, jpg, jpeg"}), 400
 
-    return jsonify({"filePath": file_path}), 200
+        file_path = os.path.join(PATH_INPUT, file.filename)
+        file.save(file_path)
+
+        return jsonify({"fileName": file.filename}), 200
+    except IOError as e:
+        logging.exception("I/O error during file upload")
+        return jsonify({"error": "Failed to save the file. Please try again."}), 500
+    except Exception as e:
+        logging.exception("Unexpected error in upload_file")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 
-# Initialize directories during application startup
-setup_directories()
+# Improved error handling for setup_directories
+try:
+    setup_directories()
+except Exception as e:
+    logging.exception("Failed to initialize directories")
+    raise RuntimeError("Failed to initialize required directories") from e
 
 # Endpoint para remover o fundo da imagem
 
@@ -131,6 +158,7 @@ def get_download_url(filename):
         scheme = request.scheme
     return f"{scheme}://{host}/api/download?file={filename}"
 
+# Improved error handling with specific exceptions and meaningful messages
 @app.route('/api/remove-background', methods=['POST'])
 def remove_background():
     """
@@ -143,7 +171,7 @@ def remove_background():
         in: query
         type: string
         required: true
-        description: Nome do arquivo
+        description: Nome do arquivo (ex: teste.jpg)
     responses:
       200:
         description: Fundo removido com sucesso
@@ -156,6 +184,8 @@ def remove_background():
             download_url:
               type: string
               description: URL para download da imagem processada
+        examples:
+          application/json: { "message": "Background removed successfully", "download_url": "http://localhost:8000/api/download?file=teste.png" }
       400:
         description: Erro ao processar a imagem
         schema:
@@ -163,37 +193,36 @@ def remove_background():
           properties:
             error:
               type: string
-              description: Mensagem de erro
+        examples:
+          application/json: { "error": "File path is required" }
     """
     try:
         file_name = request.args.get("file")
-        print(f"Received file path: {file_name}")
-
         if not file_name:
             return jsonify({"error": "File path is required"}), 400
 
-        if not os.path.isabs(file_name):
-            file_name = os.path.abspath(f"{PATH_INPUT}{file_name}")
-
-        if not os.path.exists(file_name):
+        file_path = os.path.join(PATH_INPUT, file_name)
+        if not os.path.exists(file_path):
             return jsonify({"error": f"File not found: {file_name}"}), 404
 
-        handler = ImageHandler(os.path.join(PATH_INPUT, file_name))
+        handler = ImageHandler(file_path)
         handler.remove_background()
         handler.save()
-        
         input_name = os.path.splitext(os.path.basename(file_name))[0]
         download_filename = f"{input_name}.png"
-        print(f"Arquivo processado: {handler.output_path}")
-        print(f"Nome do arquivo para download: {download_filename}")
-        
         download_url = get_download_url(download_filename)
         return jsonify({"message": "Background removed successfully", "download_url": download_url}), 200
+    except FileNotFoundError as e:
+        logging.exception("File not found error")
+        return jsonify({"error": str(e)}), 404
+    except ValueError as e:
+        logging.exception("Value error")
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logging.exception("Unexpected error in remove_background")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
-# Endpoint para adicionar um fundo à imagem
-
+# Similar improvements for add_background
 @app.route('/api/add-background', methods=['POST'])
 def add_background():
     """
@@ -206,13 +235,13 @@ def add_background():
         in: query
         type: string
         required: true
-        description: Nome do arquivo
+        description: Nome do arquivo (ex: teste.jpg)
       - name: color
         in: query
         type: string
         required: false
         default: "#000000"
-        description: Cor em hexadecimal
+        description: Cor em hexadecimal (ex: #FFFFFF)
     responses:
       200:
         description: Fundo adicionado com sucesso
@@ -225,6 +254,8 @@ def add_background():
             download_url:
               type: string
               description: URL para download da imagem processada
+        examples:
+          application/json: { "message": "Background added successfully", "download_url": "http://localhost:8000/api/download?file=teste.png" }
       400:
         description: Erro ao processar a imagem
         schema:
@@ -232,35 +263,35 @@ def add_background():
           properties:
             error:
               type: string
-              description: Mensagem de erro
+        examples:
+          application/json: { "error": "File name is required" }
     """
     try:
         file_name = request.args.get("file")
-        color = request.args.get("color", "#000")
-
+        color = request.args.get("color", "#000000")
         if not file_name:
             return jsonify({"error": "File name is required"}), 400
 
         file_path = os.path.join(PATH_INPUT, file_name)
-
         if not os.path.exists(file_path):
             return jsonify({"error": f"File not found: {file_name}"}), 404
 
         handler = ImageHandler(file_path)
         handler.add_background(color)
         handler.save()
-
         input_name = os.path.splitext(file_name)[0]
         download_filename = f"{input_name}.png"
-        print(f"Arquivo processado: {handler.output_path}")
-        print(f"Nome do arquivo para download: {download_filename}")
-        
         download_url = get_download_url(download_filename)
         return jsonify({"message": "Background added successfully", "download_url": download_url}), 200
+    except FileNotFoundError as e:
+        logging.exception("File not found error")
+        return jsonify({"error": str(e)}), 404
+    except ValueError as e:
+        logging.exception("Value error")
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Endpoint para download da imagem processada
+        logging.exception("Unexpected error in add_background")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 @app.route('/api/download', methods=['GET', 'OPTIONS'])
 def download_image():
@@ -274,12 +305,23 @@ def download_image():
         in: query
         type: string
         required: true
-        description: Nome do arquivo
+        description: Nome do arquivo (ex: teste.png)
     responses:
       200:
         description: Sucesso
         schema:
           type: file
+        examples:
+          application/octet-stream: (arquivo binário)
+      400:
+        description: Parâmetro ausente ou inválido
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: { "error": "File parameter is required" }
       404:
         description: Arquivo não encontrado
         schema:
@@ -287,7 +329,17 @@ def download_image():
           properties:
             error:
               type: string
-              description: Mensagem de erro
+        examples:
+          application/json: { "error": "File not found: teste.png" }
+      500:
+        description: Erro inesperado
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: { "error": "An unexpected error occurred" }
     """
     if request.method == 'OPTIONS':
         response = app.make_default_options_response()
@@ -298,15 +350,12 @@ def download_image():
         response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, Content-Length, Content-Type'
         response.headers['Vary'] = 'Origin'
         return response
-
     try:
         file_name = request.args.get("file")
         if not file_name:
             return jsonify({"error": "File parameter is required"}), 400
 
         output_path = os.path.join(PATH_OUTPUT, file_name)
-        print(f"Tentando download do arquivo: {output_path}")
-
         if not os.path.exists(output_path):
             return jsonify({"error": f"File not found: {file_name}"}), 404
 
@@ -316,7 +365,6 @@ def download_image():
             download_name=file_name,
             mimetype='image/png'
         )
-        
         origin = request.headers.get('Origin')
         if origin in Config.CORS_ORIGINS:
             response.headers['Access-Control-Allow-Origin'] = origin
@@ -325,9 +373,46 @@ def download_image():
             response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, Content-Length, Content-Type'
             response.headers['Vary'] = 'Origin'
         return response
+    except FileNotFoundError as e:
+        logging.exception("File not found error")
+        return jsonify({"error": str(e)}), 404
+    except ValueError as e:
+        logging.exception("Value error")
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logging.exception("Unexpected error in download_image")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint
+    ---
+    tags:
+      - system
+    responses:
+      200:
+        description: Service is healthy
+        examples:
+          application/json: { 
+            "status": "healthy",
+            "_links": {
+              "upload": { "href": "/api/upload", "method": "POST" },
+              "remove_background": { "href": "/api/remove-background", "method": "POST" },
+              "add_background": { "href": "/api/add-background", "method": "POST" },
+              "download": { "href": "/api/download", "method": "GET" }
+            }
+          }
+    """
+    return jsonify({
+        "status": "healthy",
+        "_links": {
+            "upload": {"href": "/api/upload", "method": "POST"},
+            "remove_background": {"href": "/api/remove-background", "method": "POST"},
+            "add_background": {"href": "/api/add-background", "method": "POST"},
+            "download": {"href": "/api/download", "method": "GET"}
+        }
+    }), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
