@@ -1,12 +1,66 @@
 from flask import Flask, jsonify, request, send_file
 from flasgger import Swagger
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_cors import CORS
 from util.ImageHandler import ImageHandler
 import os
 from util import setup_directories
 from util.constants import PATH_INPUT, PATH_OUTPUT
+from config import Config
 
 app = Flask(__name__)
-Swagger(app)
+CORS(app, 
+     resources={r"/api/*": {
+         "origins": Config.CORS_ORIGINS,  # Lista de origens permitidas
+         "methods": Config.CORS_METHODS,
+         "allow_headers": Config.CORS_ALLOW_HEADERS,
+         "expose_headers": Config.CORS_EXPOSE_HEADERS,
+         "supports_credentials": Config.CORS_SUPPORTS_CREDENTIALS
+     }})
+
+# Configuração do Swagger
+swagger_config = {
+    "headers": [],
+    "specs": [{
+        "endpoint": 'apispec',
+        "route": '/apispec.json',
+        "rule_filter": lambda rule: True,
+        "model_filter": lambda tag: True,
+    }],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/apidocs/"
+}
+
+swagger_template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "Remove BG API",
+        "description": "API para remoção de fundo de imagens",
+        "version": "1.0.0"
+    },    "basePath": "/api",
+    "schemes": ["https", "http"],
+    "consumes": ["multipart/form-data", "application/json"],
+    "produces": ["application/json", "image/png"]
+}
+
+Swagger(app, config=swagger_config, template=swagger_template)
+
+# Configure rate limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["100 per day", "10 per minute"]
+)
+
+# Configure Swagger template
+app.config['SWAGGER'] = {
+    'title': 'Remove BG API',
+    'uiversion': 3,
+    'openapi': '3.0.2',
+    'specs_route': '/apidocs/'
+}
 
 # Configuração para upload de arquivos
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -19,31 +73,36 @@ def allowed_file(filename):
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """
-    Endpoint que recebe o caminho do arquivo e o salva no servidor
+    Upload de imagem
     ---
+    tags:
+      - imagens
+    consumes:
+      - multipart/form-data
     parameters:
       - name: file
         in: formData
         type: file
         required: true
-        description: O arquivo a ser enviado
-        responses:
-          200:
-            description: Arquivo enviado com sucesso
-            schema:
-              type: object
-              properties:
-                filePath:
-                  type: string
-                  description: Caminho do arquivo salvo no servidor
-          400:
-            description: Erro ao enviar o arquivo
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
-                  description: Mensagem de erro"""
+        description: Arquivo de imagem
+    responses:
+      200:
+        description: Sucesso
+        schema:
+          type: object
+          properties:
+            filePath:
+              type: string
+              description: Caminho do arquivo
+      400:
+        description: Erro na requisição
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Mensagem de erro
+    """
     if 'file' not in request.files:
       return jsonify({"error": "No file part in the request"}), 400
 
@@ -63,17 +122,28 @@ setup_directories()
 
 # Endpoint para remover o fundo da imagem
 
+def get_download_url(filename):
+    # Pega o host da requisição para gerar URL absoluta
+    host = request.headers.get('Host', request.host)
+    if 'ngrok' in host:
+        scheme = 'https'
+    else:
+        scheme = request.scheme
+    return f"{scheme}://{host}/api/download?file={filename}"
+
 @app.route('/api/remove-background', methods=['POST'])
 def remove_background():
     """
-    Endpoint para remover o fundo da imagem
+    Remove o fundo da imagem
     ---
+    tags:
+      - imagens
     parameters:
       - name: file
         in: query
         type: string
         required: true
-        description: O nome do arquivo a ser processado com extensão
+        description: Nome do arquivo
     responses:
       200:
         description: Fundo removido com sucesso
@@ -96,31 +166,28 @@ def remove_background():
               description: Mensagem de erro
     """
     try:
-        # Obtém o caminho do arquivo a partir dos parâmetros da URL
         file_name = request.args.get("file")
         print(f"Received file path: {file_name}")
 
         if not file_name:
             return jsonify({"error": "File path is required"}), 400
 
-        # Garantir que o caminho é absoluto e existe
         if not os.path.isabs(file_name):
             file_name = os.path.abspath(f"{PATH_INPUT}{file_name}")
 
         if not os.path.exists(file_name):
             return jsonify({"error": f"File not found: {file_name}"}), 404
 
-        # Cria uma instância do ImageHandler
         handler = ImageHandler(os.path.join(PATH_INPUT, file_name))
         handler.remove_background()
-        handler.save()        # Retorna o link para download
-        # Pega apenas o nome base do arquivo (sem extensão) da entrada
+        handler.save()
+        
         input_name = os.path.splitext(os.path.basename(file_name))[0]
-        # A saída será sempre .png
         download_filename = f"{input_name}.png"
         print(f"Arquivo processado: {handler.output_path}")
         print(f"Nome do arquivo para download: {download_filename}")
-        download_url = f"/api/image/download/{download_filename}"
+        
+        download_url = get_download_url(download_filename)
         return jsonify({"message": "Background removed successfully", "download_url": download_url}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -130,19 +197,22 @@ def remove_background():
 @app.route('/api/add-background', methods=['POST'])
 def add_background():
     """
-    Endpoint para adicionar um fundo à imagem
+    Adiciona fundo colorido
     ---
+    tags:
+      - imagens
     parameters:
-      - name: file_name
+      - name: file
         in: query
         type: string
         required: true
-        description: O nome do arquivo a ser processado com extensão
+        description: Nome do arquivo
       - name: color
         in: query
         type: string
         required: false
-        description: A cor do fundo a ser adicionado (opcional)
+        default: "#000000"
+        description: Cor em hexadecimal
     responses:
       200:
         description: Fundo adicionado com sucesso
@@ -165,51 +235,49 @@ def add_background():
               description: Mensagem de erro
     """
     try:
-        # Obtém o nome do arquivo e a cor do fundo a partir dos parâmetros da URL
         file_name = request.args.get("file")
-        color = request.args.get("color", "#000")  # Preto como padrão
+        color = request.args.get("color", "#000")
 
         if not file_name:
             return jsonify({"error": "File name is required"}), 400
 
-        # Constrói o caminho completo do arquivo de entrada
         file_path = os.path.join(PATH_INPUT, file_name)
 
         if not os.path.exists(file_path):
             return jsonify({"error": f"File not found: {file_name}"}), 404
 
-        # Cria uma instância do ImageHandler
         handler = ImageHandler(file_path)
         handler.add_background(color)
         handler.save()
 
-        # Pega apenas o nome base do arquivo (sem extensão) da entrada
         input_name = os.path.splitext(file_name)[0]
-        # A saída será sempre .png
         download_filename = f"{input_name}.png"
         print(f"Arquivo processado: {handler.output_path}")
         print(f"Nome do arquivo para download: {download_filename}")
-        download_url = f"/api/image/download/{download_filename}"
+        
+        download_url = get_download_url(download_filename)
         return jsonify({"message": "Background added successfully", "download_url": download_url}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # Endpoint para download da imagem processada
 
-@app.route('/api/download', methods=['GET'])
+@app.route('/api/download', methods=['GET', 'OPTIONS'])
 def download_image():
     """
-    Endpoint para download da imagem processada
+    Download da imagem
     ---
+    tags:
+      - imagens
     parameters:
-      - name: filename
+      - name: file
         in: query
         type: string
         required: true
-        description: O nome do arquivo a ser baixado + .png
+        description: Nome do arquivo
     responses:
       200:
-        description: Arquivo baixado com sucesso
+        description: Sucesso
         schema:
           type: file
       404:
@@ -221,26 +289,42 @@ def download_image():
               type: string
               description: Mensagem de erro
     """
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = '*'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, Content-Length, Content-Type'
+        response.headers['Vary'] = 'Origin'
+        return response
+
     try:
-        # Garante que estamos procurando por um arquivo PNG
-        name_without_ext = request.args.get("file")
+        file_name = request.args.get("file")
+        if not file_name:
+            return jsonify({"error": "File parameter is required"}), 400
 
-        # Corrige o caminho do arquivo de saída para evitar problemas de formatação
-        output_path = os.path.abspath(os.path.join(PATH_OUTPUT, f"{name_without_ext}"))
-        
-
+        output_path = os.path.join(PATH_OUTPUT, file_name)
         print(f"Tentando download do arquivo: {output_path}")
 
-        # Verifica se o arquivo existe
         if not os.path.exists(output_path):
-          return jsonify({"error": f"File not found: {output_path}"}), 404
+            return jsonify({"error": f"File not found: {file_name}"}), 404
 
-        # Envia o arquivo para download com o nome original
-        return send_file(
+        response = send_file(
             output_path,
             as_attachment=True,
-            download_name=f"{name_without_ext}"
+            download_name=file_name,
+            mimetype='image/png'
         )
+        
+        origin = request.headers.get('Origin')
+        if origin in Config.CORS_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Headers'] = ', '.join(Config.CORS_ALLOW_HEADERS)
+            response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, Content-Length, Content-Type'
+            response.headers['Vary'] = 'Origin'
+        return response
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
