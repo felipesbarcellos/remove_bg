@@ -11,25 +11,31 @@ from config import Config
 import logging
 
 app = Flask(__name__)
-CORS(app, 
-     resources={r"/api/*": {
-         "origins": Config.CORS_ORIGINS,
-         "methods": Config.CORS_METHODS,
-         "allow_headers": Config.CORS_ALLOW_HEADERS,
-         "expose_headers": Config.CORS_EXPOSE_HEADERS,
-         "supports_credentials": Config.CORS_SUPPORTS_CREDENTIALS
-     }})
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": Config.CORS_ORIGINS,
+            "methods": Config.CORS_METHODS,
+            "allow_headers": Config.CORS_ALLOW_HEADERS,
+            "expose_headers": Config.CORS_EXPOSE_HEADERS,
+            "supports_credentials": Config.CORS_SUPPORTS_CREDENTIALS,
+        }
+    },
+)
 
 # Configuração do Swagger
 swagger_config = {
     "headers": [],
-    "specs": [{
-        "endpoint": 'apispec',
-        "route": '/apispec.json',
-    }],
+    "specs": [
+        {
+            "endpoint": "apispec",
+            "route": "/apispec.json",
+        }
+    ],
     "static_url_path": "/flasgger_static",
     "swagger_ui": True,
-    "specs_route": "/apidocs/"
+    "specs_route": "/apidocs/",
 }
 
 swagger_template = {
@@ -37,11 +43,12 @@ swagger_template = {
     "info": {
         "title": "Remove BG API",
         "description": "API para remoção de fundo de imagens",
-        "version": "1.0.0"
-    },    "basePath": "/api",
+        "version": "1.0.0",
+    },
+    "basePath": "/api",
     "schemes": ["https", "http"],
     "consumes": ["multipart/form-data", "application/json"],
-    "produces": ["application/json", "image/png"]
+    "produces": ["application/json", "image/png"],
 }
 
 Swagger(app, config=swagger_config, template=swagger_template)
@@ -50,28 +57,28 @@ Swagger(app, config=swagger_config, template=swagger_template)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["100 per day", "10 per minute"]
+    default_limits=["100 per day", "10 per minute"],
 )
 
 # Configure Swagger template
-app.config['SWAGGER'] = {
-    'title': 'Remove BG API',
-    'uiversion': 3,
-    'openapi': '3.0.2',
-    'specs_route': '/apidocs/'
+app.config["SWAGGER"] = {
+    "title": "Remove BG API",
+    "uiversion": 3,
+    "openapi": "3.0.2",
+    "specs_route": "/apidocs/",
 }
 
 # Configuração para upload de arquivos
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 
 def allowed_file(filename):
     """Verifica se o arquivo tem uma extensão permitida."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # Improved error handling for the upload_file endpoint
-@app.route('/api/upload', methods=['POST'])
+@app.route("/api/upload", methods=["POST"])
 def upload_file():
     """
     Upload de imagem
@@ -117,16 +124,19 @@ def upload_file():
           application/json: { "error": "An unexpected error occurred" }
     """
     try:
-        if 'file' not in request.files:
+        if "file" not in request.files:
             return jsonify({"error": "No file part in the request"}), 400
 
-        file = request.files['file']
+        file = request.files["file"]
 
-        if file.filename == '':
+        if file.filename == "":
             return jsonify({"error": "No file selected for uploading"}), 400
 
         if not allowed_file(file.filename):
-            return jsonify({"error": "Invalid file extension. Allowed: png, jpg, jpeg"}), 400
+            return (
+                jsonify({"error": "Invalid file extension. Allowed: png, jpg, jpeg"}),
+                400,
+            )
 
         file_path = os.path.join(PATH_INPUT, file.filename)
         file.save(file_path)
@@ -149,17 +159,19 @@ except Exception as e:
 
 # Endpoint para remover o fundo da imagem
 
+
 def get_download_url(filename):
     # Pega o host da requisição para gerar URL absoluta
-    host = request.headers.get('Host', request.host)
-    if 'ngrok' in host:
-        scheme = 'https'
+    host = request.headers.get("Host", request.host)
+    if "ngrok" in host:
+        scheme = "https"
     else:
         scheme = request.scheme
     return f"{scheme}://{host}/api/download?file={filename}"
 
+
 # Improved error handling with specific exceptions and meaningful messages
-@app.route('/api/remove-background', methods=['POST'])
+@app.route("/api/remove-background", methods=["POST"])
 def remove_background():
     """
     Remove o fundo da imagem
@@ -211,7 +223,15 @@ def remove_background():
         input_name = os.path.splitext(os.path.basename(file_name))[0]
         download_filename = f"{input_name}.png"
         download_url = get_download_url(download_filename)
-        return jsonify({"message": "Background removed successfully", "download_url": download_url}), 200
+        return (
+            jsonify(
+                {
+                    "message": "Background removed successfully",
+                    "download_url": download_url,
+                }
+            ),
+            200,
+        )
     except FileNotFoundError as e:
         logging.exception("File not found error")
         return jsonify({"error": str(e)}), 404
@@ -222,8 +242,9 @@ def remove_background():
         logging.exception("Unexpected error in remove_background")
         return jsonify({"error": "An unexpected error occurred"}), 500
 
+
 # Similar improvements for add_background
-@app.route('/api/add-background', methods=['POST'])
+@app.route("/api/add-background", methods=["POST"])
 def add_background():
     """
     Adiciona fundo colorido
@@ -282,7 +303,15 @@ def add_background():
         input_name = os.path.splitext(file_name)[0]
         download_filename = f"{input_name}.png"
         download_url = get_download_url(download_filename)
-        return jsonify({"message": "Background added successfully", "download_url": download_url}), 200
+        return (
+            jsonify(
+                {
+                    "message": "Background added successfully",
+                    "download_url": download_url,
+                }
+            ),
+            200,
+        )
     except FileNotFoundError as e:
         logging.exception("File not found error")
         return jsonify({"error": str(e)}), 404
@@ -293,7 +322,8 @@ def add_background():
         logging.exception("Unexpected error in add_background")
         return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/download', methods=['GET', 'OPTIONS'])
+
+@app.route("/api/download", methods=["GET", "OPTIONS"])
 def download_image():
     """
     Download da imagem
@@ -341,14 +371,16 @@ def download_image():
         examples:
           application/json: { "error": "An unexpected error occurred" }
     """
-    if request.method == 'OPTIONS':
+    if request.method == "OPTIONS":
         response = app.make_default_options_response()
-        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin')
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = '*'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, Content-Length, Content-Type'
-        response.headers['Vary'] = 'Origin'
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Expose-Headers"] = (
+            "Content-Disposition, Content-Length, Content-Type"
+        )
+        response.headers["Vary"] = "Origin"
         return response
     try:
         file_name = request.args.get("file")
@@ -363,15 +395,19 @@ def download_image():
             output_path,
             as_attachment=True,
             download_name=file_name,
-            mimetype='image/png'
+            mimetype="image/png",
         )
-        origin = request.headers.get('Origin')
+        origin = request.headers.get("Origin")
         if origin in Config.CORS_ORIGINS:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Headers'] = ', '.join(Config.CORS_ALLOW_HEADERS)
-            response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, Content-Length, Content-Type'
-            response.headers['Vary'] = 'Origin'
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Headers"] = ", ".join(
+                Config.CORS_ALLOW_HEADERS
+            )
+            response.headers["Access-Control-Expose-Headers"] = (
+                "Content-Disposition, Content-Length, Content-Type"
+            )
+            response.headers["Vary"] = "Origin"
         return response
     except FileNotFoundError as e:
         logging.exception("File not found error")
@@ -383,7 +419,8 @@ def download_image():
         logging.exception("Unexpected error in download_image")
         return jsonify({"error": "An unexpected error occurred"}), 500
 
-@app.route('/api/health', methods=['GET'])
+
+@app.route("/api/health", methods=["GET"])
 def health_check():
     """
     Health check endpoint
@@ -394,7 +431,7 @@ def health_check():
       200:
         description: Service is healthy
         examples:
-          application/json: { 
+          application/json: {
             "status": "healthy",
             "_links": {
               "upload": { "href": "/api/upload", "method": "POST" },
@@ -404,15 +441,24 @@ def health_check():
             }
           }
     """
-    return jsonify({
-        "status": "healthy",
-        "_links": {
-            "upload": {"href": "/api/upload", "method": "POST"},
-            "remove_background": {"href": "/api/remove-background", "method": "POST"},
-            "add_background": {"href": "/api/add-background", "method": "POST"},
-            "download": {"href": "/api/download", "method": "GET"}
-        }
-    }), 200
+    return (
+        jsonify(
+            {
+                "status": "healthy",
+                "_links": {
+                    "upload": {"href": "/api/upload", "method": "POST"},
+                    "remove_background": {
+                        "href": "/api/remove-background",
+                        "method": "POST",
+                    },
+                    "add_background": {"href": "/api/add-background", "method": "POST"},
+                    "download": {"href": "/api/download", "method": "GET"},
+                },
+            }
+        ),
+        200,
+    )
+
 
 if __name__ == "__main__":
     app.run(debug=True)
