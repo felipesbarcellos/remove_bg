@@ -1,5 +1,48 @@
+# Python
+*.py[cod]
 *.pyc
-.venv
-.vscode
+*$py.class
+__pycache__/
 .pytest_cache
-__pycache__
+.Python
+build/
+dist/
+downloads/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv
+env/
+ENV/
+.env
+
+# IDE
+.vscode
+.idea/
+*.swp
+*.swo
+
+# Project specific
+imagens/entrada/*
+imagens/saida/*
+imagens/originais/*
+!imagens/entrada/.gitkeep
+!imagens/saida/.gitkeep
+!imagens/originais/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Service files
+*.pid
+*.bat
+
+# NSSM
+nssm/

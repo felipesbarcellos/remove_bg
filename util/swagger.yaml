@@ -1,0 +1,107 @@
+openapi: 3.0.2
+info:
+  title: "Remove BG API"
+  description: "API para remoção de fundo de imagens"
+  version: "1.0.0"
+servers:
+  - url: /api
+    description: API Base URL
+tags:
+  - name: imagens
+    description: Operações com imagens
+paths:
+  /upload:
+    post:
+      tags:
+        - imagens
+      summary: Upload de imagem
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filePath:
+                    type: string
+  /remove-background:
+    post:
+      tags:
+        - imagens
+      summary: Remove fundo da imagem
+      parameters:
+        - name: file
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  download_url:
+                    type: string
+  /add-background:
+    post:
+      tags:
+        - imagens
+      summary: Adiciona fundo à imagem
+      parameters:
+        - name: file
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: color
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "#000000"
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  download_url:
+                    type: string
+  /download:
+    get:
+      tags:
+        - imagens
+      summary: Download da imagem
+      parameters:
+        - name: file
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary

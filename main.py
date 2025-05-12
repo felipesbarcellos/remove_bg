@@ -1,13 +1,7 @@
 from util import api
+from util.setup_dirs import setup_directories
 
-class Main:
-    def __init__(self):
-        # Initialize the Flask app
-        self.app = api.app
-        self.app.run(debug=True, host='localhost', port=5000)
-        # Setup directories
-        api.setup_directories()
+app = api.app
 
 if __name__ == "__main__":
-    Main()
-    ...
+    app.run(debug=True, host='localhost', port=5000)
