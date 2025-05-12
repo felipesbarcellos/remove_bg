@@ -57,6 +57,8 @@ class ImageHandler:
             size = (int(size[0]), int(size[1]))
         elif size == "half":
             size = tuple([int(i/2) for i in self.image.size])
+        else:
+            raise ValueError("Invalid size parameter. Use 'half' or a tuple (width, height).")
         self.image = self.image.resize(size)
 
 

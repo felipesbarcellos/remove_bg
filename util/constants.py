@@ -1,5 +1,13 @@
 import os
 
+# Try to load environment variables from .env file if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Running in container or dotenv not installed
+    pass
+
 # Base paths
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 PATH_INPUT = os.path.join(BASE_DIR, 'imagens', 'entrada') + "/"
@@ -11,13 +19,13 @@ TEST_FILE = "teste.jpg"
 PATH_INPUT_TEST = os.path.join(PATH_INPUT, TEST_FILE)
 
 # File configurations
-MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB max file size
+MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 5 * 1024 * 1024))  # 5MB default
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 # Flask configurations
-DEBUG = False
+DEBUG = os.getenv('FLASK_ENV', 'production') == 'development'
 TESTING = False
-SECRET_KEY = "your-secret-key-here"  # Como não é sensível, podemos deixar hardcoded
+SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'fallback-development-key')
 
 # CORS configuration
 CORS_ORIGINS = [

@@ -11,12 +11,12 @@ downloads/
 *.egg-info/
 .installed.cfg
 *.egg
+.env
 
 # Virtual Environment
 .venv
 env/
 ENV/
-.env
 
 # IDE
 .vscode
@@ -35,6 +35,7 @@ imagens/originais/*
 # Logs
 logs/*
 !logs/.gitkeep
+*.log
 
 # Windows
 Thumbs.db

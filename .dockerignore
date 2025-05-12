@@ -1,0 +1,68 @@
+# Version control
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+htmlcov/
+.coverage
+.env
+.venv
+env/
+venv/
+ENV/
+.pytest_cache/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Logs and databases
+logs/
+*.log
+*.sqlite
+*.db
+
+# Image directories (will be mounted as volumes)
+imagens/
+!imagens/entrada/.gitkeep
+!imagens/saida/.gitkeep
+!imagens/originais/.gitkeep
+
+# Windows specific
+*.bat
+*.ps1
+nssm/
+*.exe
+
+# Test files and cache
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Docker
+.docker
+docker-compose.override.yml
+
+# Documentation
+*.md
+LICENSE
+*.txt
+!requirements.txt
+
+# Temp files
+*.tmp
+*.temp
+*~
+.DS_Store
