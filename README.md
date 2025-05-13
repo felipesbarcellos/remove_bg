@@ -1,8 +1,8 @@
-# Remove BG API
+# Remove BG API [Projeto para Estudo]
 
 ## Descrição
 
-O projeto **Remove BG** é uma API desenvolvida em Python utilizando o framework Flask. Ela permite realizar o upload de imagens, remover o fundo de imagens e adicionar um fundo personalizado. O objetivo principal é facilitar o processamento de imagens de forma simples e eficiente.
+O projeto **Remove BG** é uma API desenvolvida em Python utilizando o framework Flask. Ela permite realizar o upload de imagens, remover o fundo de imagens e adicionar um fundo personalizado. O objetivo principal é estudar as tecnologias utilizadas e compreender os conceitos de back-end utilizando protocolo http.
 
 ## Funcionalidades
 
@@ -12,21 +12,6 @@ O projeto **Remove BG** é uma API desenvolvida em Python utilizando o framework
 - **Download de Imagens Processadas**: Baixe as imagens processadas diretamente do servidor.
 - **Documentação Interativa**: Acesse a documentação interativa da API com Swagger.
 
-## Estrutura do Projeto
-
-```
-remove_bg/
-├── classes/                # Classes para manipulação de arquivos e imagens
-├── imagens/                # Diretório para armazenar imagens
-│   ├── entrada/            # Imagens enviadas pelo usuário
-│   ├── originais/          # Imagens originais
-│   └── saida/              # Imagens processadas
-├── util/                   # Utilitários e configurações
-├── main.py                 # Arquivo principal para execução
-├── requirements.txt        # Dependências do projeto
-├── tests/                  # Testes automatizados
-└── README.md               # Documentação do projeto
-```
 
 ## Instalação
 
