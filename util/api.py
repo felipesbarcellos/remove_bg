@@ -183,7 +183,7 @@ def remove_background():
         in: query
         type: string
         required: true
-        description: Nome do arquivo (ex: teste.jpg)
+        description: Nome do arquivo (ex teste.jpg)
     responses:
       200:
         description: Fundo removido com sucesso
@@ -256,13 +256,13 @@ def add_background():
         in: query
         type: string
         required: true
-        description: Nome do arquivo (ex: teste.jpg)
+        description: Nome do arquivo (ex teste.jpg)
       - name: color
         in: query
         type: string
         required: false
         default: "#000000"
-        description: Cor em hexadecimal (ex: #FFFFFF)
+        description: Cor em hexadecimal (ex #FFFFFF)
     responses:
       200:
         description: Fundo adicionado com sucesso
@@ -335,7 +335,7 @@ def download_image():
         in: query
         type: string
         required: true
-        description: Nome do arquivo (ex: teste.png)
+        description: Nome do arquivo (ex teste.png)
     responses:
       200:
         description: Sucesso
